@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Produk extends Model
 {
-    use SoftDeletes; use HasFactory;
+    use SoftDeletes,HasFactory;
 
     protected $fillable = [
         'NamaProduk',

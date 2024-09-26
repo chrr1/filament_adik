@@ -2,19 +2,23 @@
 
 namespace App\Filament\Resources;
 
-use App\Exports\ProdukExport;
-use App\Filament\Resources\ProdukResource\Pages;
-use App\Models\Produk;
-use Filament\Forms;
-use Filament\Forms\Components\TextInput;
-use Filament\Resources\Form;
-use Filament\Resources\Resource;
-use Filament\Tables;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Resources\Table;
-use Maatwebsite\Excel\Facades\Excel;
 use Dompdf\Dompdf;
 use Dompdf\Options;
+use Filament\Forms;
+use Filament\Tables;
+use App\Models\Produk;
+use Filament\Resources\Form;
+use App\Exports\ProdukExport;
+use Filament\Resources\Table;
+use Filament\Resources\Resource;
+use Filament\Tables\Filters\Filter;
+use Maatwebsite\Excel\Facades\Excel;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Forms\Components\TextInput;
+use Filament\Tables\Enums\FiltersLayout;
+use Filament\Forms\Components\DatePicker;
+use Illuminate\Database\Eloquent\Builder;
+use App\Filament\Resources\ProdukResource\Pages;
 
 class ProdukResource extends Resource
 {
@@ -58,10 +62,26 @@ class ProdukResource extends Resource
                 Tables\Actions\DeleteBulkAction::make(),
             ])
             ->filters([
-                Tables\Filters\Filter::make('deleted')
-                    ->label('Lihat Data yang Dihapus')
-                    ->query(fn ($query) => $query->onlyTrashed()),
-            ])
+                // Tables\Filters\Filter::make('deleted')
+                //     ->label('Lihat Data yang Dihapus')
+                //     ->query(fn ($query) => $query->onlyTrashed()),
+                    Filter::make('created_at')
+                    ->form([
+                        DatePicker::make('created_from'),
+                        DatePicker::make('created_until'),
+                    ])->columns(2)
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['created_from'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
+                            )
+                            ->when(
+                                $data['created_until'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
+                            );
+                    })
+                ],FiltersLayout::AboveContent)->filtersFormColumns(1)
             ->headerActions([
                 Tables\Actions\Action::make('exportExcel')
                     ->label('Export Excel')
@@ -137,10 +157,10 @@ class ProdukResource extends Resource
     {
         return [
             'index' => Pages\ListProduks::route('/'),
+            'deleted' => Pages\DeletedProduks::route('/deleted'),
             'create' => Pages\CreateProduk::route('/create'),
             'edit' => Pages\EditProduk::route('/{record}/edit'),
             'view' => Pages\ViewProduk::route('/{record}'),
-            'deleted' => Pages\DeletedProduks::route('/deleted'),
         ];
     }
 }
