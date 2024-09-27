@@ -29,6 +29,7 @@ class ProdukFactory extends Factory
             'NamaProduk' => $this->faker->randomElement($namaProduks),
             'Harga' => $this->faker->randomFloat(2, 10000, 500000), // Harga antara 10.000 - 500.000
             'Stok' => $this->faker->numberBetween(10, 100), // Stok antara 10 - 100
+            'branch_id' => $this->faker->numberBetween(1, 2), // Stok antara 10 - 100
         ];
     }
 }
