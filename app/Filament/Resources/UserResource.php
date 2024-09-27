@@ -16,6 +16,7 @@ use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Hash;
 use App\Filament\Resources\UserResource\Pages;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Str;
 
 class UserResource extends Resource
 {
@@ -116,7 +117,6 @@ class UserResource extends Resource
                     ->required()
                     ->default(0),
 
-                // Dropdown untuk user_group_id: Admin = 1, User Biasa = 2
                 Select::make('user_group_id')
                     ->label('Grup Pengguna')
                     ->options([
@@ -125,7 +125,6 @@ class UserResource extends Resource
                     ])
                     ->required()
                     ->default(2),
-           
             ]);
     }
 
@@ -133,7 +132,25 @@ class UserResource extends Resource
     {
         return $table
             ->columns([
-                ImageColumn::make('avatar')->label('Foto Profil')->circular()->width(50)->height(50),
+                ImageColumn::make('avatar')
+    ->label('Foto Profil')
+    ->circular()
+    ->width(50)
+    ->height(50)
+    ->getStateUsing(function ($record) {
+        // Cek apakah avatar ada
+        if ($record->avatar) {
+            return $record->avatar; // Mengambil avatar jika ada
+        }
+
+        // Jika tidak ada avatar, generate avatar default dengan huruf pertama nama
+        $initial = strtoupper(substr($record->name, 0, 1));
+        $color = sprintf('#%06X', mt_rand(0, 0xFFFFFF)); // Warna acak untuk latar belakang
+
+        // Menggunakan URL avatar dari ui-avatars
+        return 'https://ui-avatars.com/api/?name=' . urlencode($initial) . '&background=' . substr($color, 1) . '&color=ffffff&size=128';
+    }),
+
                 TextColumn::make('name')->label('Nama'),
                 TextColumn::make('full_name')->label('Nama Lengkap'),
                 TextColumn::make('email')->label('Email'),
@@ -146,8 +163,7 @@ class UserResource extends Resource
                     ->modalHeading('Konfirmasi Penghapusan')
                     ->modalSubheading('Apakah Anda yakin ingin menghapus pengguna ini?')
                     ->modalButton('Hapus'),
-                
-                // Opsi untuk mereset password
+
                 Tables\Actions\Action::make('resetPassword')
                     ->icon('heroicon-o-lock-closed')
                     ->label('Reset Password')

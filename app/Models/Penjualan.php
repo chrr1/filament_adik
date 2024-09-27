@@ -40,4 +40,18 @@ class Penjualan extends Model
     {
         return $this->belongsTo(Produk::class);
     }
+
+    public function createdBy()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    // Relasi ke user yang memperbarui
+    public function updatedBy()
+    {
+        return $this->belongsTo(User::class, 'updated_by');
+    }
+
+
+
 }

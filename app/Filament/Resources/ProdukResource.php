@@ -57,19 +57,24 @@ class ProdukResource extends Resource
                 Tables\Actions\ViewAction::make()->color('info'),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
+                Tables\Actions\RestoreAction::make()
+                    ->color('warning')
+                    ->icon('heroicon-o-arrow-up-circle')
+                    ->requiresConfirmation(),
             ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),
             ])
             ->filters([
-                // Tables\Filters\Filter::make('deleted')
-                //     ->label('Lihat Data yang Dihapus')
-                //     ->query(fn ($query) => $query->onlyTrashed()),
-                    Filter::make('created_at')
+                Filter::make('deleted')
+                    ->label('Lihat Data yang Dihapus')
+                    ->query(fn (Builder $query) => $query->onlyTrashed()),
+                Filter::make('created_at')
                     ->form([
-                        DatePicker::make('created_from'),
-                        DatePicker::make('created_until'),
-                    ])->columns(2)
+                        DatePicker::make('created_from')->label('Dari Tanggal'),
+                        DatePicker::make('created_until')->label('Sampai Tanggal'),
+                    ])
+                    ->columns(2)
                     ->query(function (Builder $query, array $data): Builder {
                         return $query
                             ->when(
@@ -80,78 +85,118 @@ class ProdukResource extends Resource
                                 $data['created_until'],
                                 fn (Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
                             );
-                    })
-                ],FiltersLayout::AboveContent)->filtersFormColumns(1)
+                    }),
+            ], FiltersLayout::AboveContent)->filtersFormColumns(1)
             ->headerActions([
                 Tables\Actions\Action::make('exportExcel')
                     ->label('Export Excel')
-                    ->action(function () {
-                        return Excel::download(new ProdukExport, 'produk.xlsx');
+                    ->form([
+                        DatePicker::make('created_from')->label('Dari Tanggal'),
+                        DatePicker::make('created_until')->label('Sampai Tanggal'),
+                    ])
+                    ->action(function (array $data) {
+                        $query = Produk::query();
+
+                        // Filter berdasarkan tanggal yang dipilih
+                        if (!empty($data['created_from'])) {
+                            $query->whereDate('created_at', '>=', $data['created_from']);
+                        }
+
+                        if (!empty($data['created_until'])) {
+                            $query->whereDate('created_at', '<=', $data['created_until']);
+                        }
+
+                        $produks = $query->get();
+
+                        // Gunakan produk yang sudah difilter untuk diekspor
+                        return Excel::download(new ProdukExport($produks), 'produk_' . now()->format('Y-m-d_H-i-s') . '.xlsx');
                     }),
                     Tables\Actions\Action::make('exportPDF')
-                    ->label('Export PDF')
-                    ->action(function () {
-                        // Panggil fungsi exportPDF secara langsung
-                        return static::exportPDF();
-                    }),
+    ->label('Export PDF')
+    ->form([
+        DatePicker::make('created_from')->label('Dari Tanggal'),
+        DatePicker::make('created_until')->label('Sampai Tanggal'),
+    ])
+    ->action(function (array $data) {
+        $query = Produk::query();
+
+        // Filter berdasarkan tanggal yang dipilih
+        if (!empty($data['created_from'])) {
+            $query->whereDate('created_at', '>=', $data['created_from']);
+        }
+
+        if (!empty($data['created_until'])) {
+            $query->whereDate('created_at', '<=', $data['created_until']);
+        }
+
+        $produks = $query->get();
+        $options = new Options();
+        $options->set('defaultFont', 'Arial');
+        $dompdf = new Dompdf($options);
+
+        
+$html = '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">';
+$imageData = base64_encode(file_get_contents(public_path('logo.png')));
+$html .= '<img src="data:image/png;base64,' . $imageData . '" alt="Logo" width="200"   />';
+
+$html .= '<div style="text-align: right; margin-left: 20px;">';
+$html .= '<p style="margin: 0;">Halaman: {PAGE_NUM}/{PAGE_COUNT}</p>';
+$html .= '<p style="margin: 0;">Dicetak oleh: ' . auth()->user()->name . '</p>';
+$html .= '<p style="margin: 0;">Tanggal cetak: ' . now()->format('d-m-Y H:i:s') . '</p>';
+$html .= '</div>'; 
+
+$html .= '<hr>';
+
+
+
+        // Isi tabel produk
+        $html .= '<h1 style="text-align: center;">Daftar Produk</h1>';
+        $html .= '<table border="1" width="100%" style="border-collapse: collapse; text-align: left;">';
+        $html .= '<tr>
+                    <th>No</th>
+                    <th>Nama Produk</th>
+                    <th>Harga</th>
+                    <th>Stok</th>
+                    <th>Tanggal Dibuat</th>
+                  </tr>';
+
+        $no = 1;
+        foreach ($produks as $produk) {
+            $html .= '<tr>
+                        <td style="text-align: center;">' . $no++ . '</td>
+                        <td>' . $produk->NamaProduk . '</td>
+                        <td>' . number_format($produk->Harga, 2) . '</td>
+                        <td>' . $produk->Stok . '</td>
+                        <td>' . $produk->created_at->format('d-m-Y H:i:s') . '</td>
+                      </tr>';
+        }
+
+        $html .= '</table>';
+
+        // Load HTML ke Dompdf
+        $dompdf->loadHtml($html);
+
+        // Set ukuran dan orientasi kertas
+        $dompdf->setPaper('A4', 'landscape');
+
+        // Render PDF
+        $dompdf->render();
+
+        // Mengirim PDF sebagai response
+        return response()->stream(
+            function () use ($dompdf) {
+                echo $dompdf->output();
+            },
+            200,
+            [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="Daftar_Produk_' . date('Y-m-d_H-i-s') . '.pdf"',
+            ]
+        );
+    })
+                
             ]);
     }
-
-    public static function exportPDF()
-{
-    $produks = Produk::all();
-    $options = new Options();
-    $options->set('defaultFont', 'Arial');
-    $options->set('isHtml5ParserEnabled', true);
-    $options->set('isRemoteEnabled', true);
-    $dompdf = new Dompdf($options);
-
-    // Membuat HTML untuk PDF
-    $html = '<h1 style="text-align: center;">Daftar Produk</h1>';
-    $html .= '<table border="1" width="100%" style="border-collapse: collapse; text-align: left;">';
-    $html .= '<tr>
-                <th>No</th>
-                <th>Nama Produk</th>
-                <th>Harga</th>
-                <th>Stok</th>
-                <th>Tanggal Dibuat</th>
-              </tr>';
-
-    $no = 1;
-    foreach ($produks as $produk) {
-        $html .= '<tr>
-                    <td style="text-align: center;">' . $no++ . '</td>
-                    <td>' . $produk->NamaProduk . '</td>
-                    <td>' . number_format($produk->Harga, 2) . '</td>
-                    <td>' . $produk->Stok . '</td>
-                    <td>' . $produk->created_at->format('d-m-Y H:i:s') . '</td>
-                  </tr>';
-    }
-
-    $html .= '</table>';
-
-    // Load HTML ke Dompdf
-    $dompdf->loadHtml($html);
-
-    // Set ukuran dan orientasi kertas
-    $dompdf->setPaper('A4', 'landscape');
-
-    // Render PDF
-    $dompdf->render();
-
-    // Menggunakan response()->stream() untuk mengirim PDF
-    return response()->stream(
-        function () use ($dompdf) {
-            echo $dompdf->output();
-        },
-        200,
-        [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="Daftar_Produk_' . date('Y-m-d_H-i-s') . '.pdf"',
-        ]
-    );
-}
-
 
     public static function getPages(): array
     {

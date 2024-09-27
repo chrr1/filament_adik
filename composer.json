@@ -9,6 +9,7 @@
         "barryvdh/laravel-dompdf": "*",
         "blade-ui-kit/blade-heroicons": "^2.4",
         "dompdf/dompdf": "^3.0",
+        "elibyy/tcpdf-laravel": "^11.1",
         "filament/actions": "^3.2",
         "filament/filament": "^3.2",
         "laravel/framework": "^11.9",

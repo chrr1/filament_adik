@@ -19,6 +19,7 @@ use Filament\Tables\Actions\DeleteAction;
 use Maatwebsite\Excel\Facades\Excel;
 use Dompdf\Dompdf;
 use Dompdf\Options;
+use Illuminate\Support\Facades\Auth;
 
 class PenjualanResource extends Resource
 {
@@ -27,40 +28,50 @@ class PenjualanResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
 
     public static function form(Forms\Form $form): Forms\Form
-    {
-        return $form
-            ->schema([
-                Select::make('pelanggan_id')
-                    ->label('Pelanggan')
-                    ->options(Pelanggan::all()->pluck('NamaPelanggan', 'id'))
-                    ->required(),
+{
+    return $form
+        ->schema([
+            Select::make('pelanggan_id')
+                ->label('Pelanggan')
+                ->options(Pelanggan::all()->pluck('NamaPelanggan', 'id'))
+                ->required(),
 
-                Select::make('produk_id')
-                    ->label('Produk')
-                    ->options(Produk::all()->pluck('NamaProduk', 'id'))
-                    ->required(),
+            Select::make('produk_id')
+                ->label('Produk')
+                ->options(Produk::all()->pluck('NamaProduk', 'id'))
+                ->required(),
 
-                TextInput::make('quantity')
-                    ->numeric()
-                    ->label('Jumlah')
-                    ->required(),
+            TextInput::make('quantity')
+                ->numeric()
+                ->label('Jumlah')
+                ->required(),
 
-                TextInput::make('harga_satuan')
-                    ->numeric()
-                    ->label('Harga Satuan')
-                    ->required(),
+            TextInput::make('harga_satuan')
+                ->numeric()
+                ->label('Harga Satuan')
+                ->required(),
 
-                TextInput::make('total_harga')
-                    ->numeric()
-                    ->label('Total Harga')
-                    ->required(),
+            TextInput::make('total_harga')
+                ->numeric()
+                ->label('Total Harga')
+                ->required(),
 
-                DatePicker::make('tanggal_penjualan')
-                    ->label('Tanggal Penjualan')
-                    ->default(now())
-                    ->required(),
-            ]);
-    }
+            DatePicker::make('tanggal_penjualan')
+                ->label('Tanggal Penjualan')
+                ->default(now())
+                ->required(),
+
+            Select::make('created_by')
+                ->label('Dibuat Oleh')
+                ->options(\App\Models\User::all()->pluck('name', 'id'))
+                ->required(),
+
+            Select::make('updated_by')
+                ->label('Diperbarui Oleh')
+                ->options(\App\Models\User::all()->pluck('name', 'id'))
+                ,
+        ]);
+}
 
     public static function table(Tables\Table $table): Tables\Table
     {
@@ -73,6 +84,8 @@ class PenjualanResource extends Resource
                 TextColumn::make('harga_satuan')->label('Harga Satuan')->money('IDR', true),
                 TextColumn::make('total_harga')->label('Total Harga')->money('IDR', true),
                 TextColumn::make('tanggal_penjualan')->label('Tanggal Penjualan')->date(),
+                TextColumn::make('created_by')->label('Dibuat Oleh')->getStateUsing(fn (Penjualan $record) => $record->created_by ? $record->createdBy->name : '-'),
+                TextColumn::make('updated_by')->label('Diperbarui Oleh')->getStateUsing(fn (Penjualan $record) => $record->updated_by ? $record->updatedBy->name : '-'),
             ])
             ->headerActions([
                 Tables\Actions\Action::make('exportExcel')
@@ -163,18 +176,5 @@ class PenjualanResource extends Resource
         ];
     }
 
-    protected static function afterSave(Penjualan $penjualan): void
-    {
-        // Mengisi kolom created_by dan updated_by
-        $penjualan->created_by = auth()->id(); // Mengisi dengan ID pengguna yang sedang login
-        $penjualan->updated_by = auth()->id(); // Mengisi dengan ID pengguna yang sedang login
-        $penjualan->saveQuietly(); // Menghindari event save
-    }
-
-    protected static function afterUpdate(Penjualan $penjualan): void
-    {
-        // Mengisi kolom updated_by
-        $penjualan->updated_by = auth()->id(); // Mengisi dengan ID pengguna yang sedang login
-        $penjualan->saveQuietly(); // Menghindari event save
-    }
+    
 }
