@@ -9,10 +9,16 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
+    // * run php artisan migrate:fresh --seed
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
+            // * harus unsigned big integer
+            $table->unsignedBigInteger('branch_id')->nullable();
+            //! Remember token jangan dihapus
+            $table->rememberToken();
+
             $table->string('name');
             $table->string('full_name', 250)->nullable();
             $table->string('email')->unique();
@@ -40,7 +46,6 @@ return new class extends Migration
             $table->date('sync_date')->nullable();
             $table->string('item_category_name', 20)->nullable();
             $table->integer('item_stock')->default(0);
-            $table->integer('branch_id')->nullable();
             $table->integer('branch_status')->default(0);
             $table->integer('resto_status')->default(0);
             $table->integer('kitchen_status')->default(0);
@@ -60,7 +65,7 @@ return new class extends Migration
             $table->integer('deleted_id')->nullable();
             $table->timestamps();
             $table->softDeletesTz(); //* tambah softdelete
-           
+
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

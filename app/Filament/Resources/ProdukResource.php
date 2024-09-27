@@ -13,6 +13,7 @@ use Filament\Resources\Table;
 use Filament\Resources\Resource;
 use Filament\Tables\Filters\Filter;
 use Maatwebsite\Excel\Facades\Excel;
+use Filament\Forms\Components\Select;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
 use Filament\Tables\Enums\FiltersLayout;
@@ -46,6 +47,67 @@ class ProdukResource extends Resource
 
     public static function table(Tables\Table $table): Tables\Table
     {
+        // dd(auth()->user());
+        // *check if user is admin
+        if(auth()->user()->user_group_id){
+            //*if user is admin set filter to
+            $filter=Filter::make('created_at')
+            ->form([
+                // * ditambah form select branch jika admin
+                // * pastikan ada field branc_id di tabel
+                Select::make('branch_id')->label('Branch')
+                ->options([
+                    1 => 'Branch 1',
+                    2 => 'Branch 2',
+                    3 => 'Branch 3',
+                ]),
+                // * Gunakan Fungsi dibawah untuk menggunakan model branch (jika sudah jadi) jangan lupa model di import
+                // Select::make('Branch')
+                // ->label('Author')
+                // ->options(Branch::all()->pluck('branch_name', 'id'))
+                // ->searchable()
+                DatePicker::make('created_from'),
+                DatePicker::make('created_until'),
+            ])
+            // * set berapa banyak kolom ditampilkan
+            ->columns(3)
+            ->query(function (Builder $query, array $data): Builder {
+                return $query
+                    ->when(
+                        $data['created_from'],
+                        fn (Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
+                    )
+                    ->when(
+                        $data['branch_id'],
+                        fn (Builder $query, $id): Builder => $query->where('branch_id', $id),
+                    )
+                    ->when(
+                        $data['created_until'],
+                        fn (Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
+                    );
+            });
+        }else{
+            //*if user is NOT admin set filter to
+            $filter=Filter::make('created_at')
+            ->form([
+                DatePicker::make('created_from'),
+                DatePicker::make('created_until'),
+            ])
+            // * set berapa banyak kolom ditampilkan
+            ->columns(2)
+            ->query(function (Builder $query, array $data): Builder {
+                return $query
+                    ->when(
+                        $data['created_from'],
+                        fn (Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
+                    )
+                    ->when(
+                        $data['created_until'],
+                        fn (Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
+                    );
+            });
+
+        }
         return $table
             ->columns([
                 TextColumn::make('NamaProduk')->label('Nama Produk'),
@@ -65,22 +127,8 @@ class ProdukResource extends Resource
                 // Tables\Filters\Filter::make('deleted')
                 //     ->label('Lihat Data yang Dihapus')
                 //     ->query(fn ($query) => $query->onlyTrashed()),
-                    Filter::make('created_at')
-                    ->form([
-                        DatePicker::make('created_from'),
-                        DatePicker::make('created_until'),
-                    ])->columns(2)
-                    ->query(function (Builder $query, array $data): Builder {
-                        return $query
-                            ->when(
-                                $data['created_from'],
-                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
-                            )
-                            ->when(
-                                $data['created_until'],
-                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
-                            );
-                    })
+                // * set filter
+                    $filter
                 ],FiltersLayout::AboveContent)->filtersFormColumns(1)
             ->headerActions([
                 Tables\Actions\Action::make('exportExcel')
@@ -162,5 +210,16 @@ class ProdukResource extends Resource
             'edit' => Pages\EditProduk::route('/{record}/edit'),
             'view' => Pages\ViewProduk::route('/{record}'),
         ];
+    }
+    // * query for auto select branch
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        if (auth()->user()->user_group_id == 1) {
+            return $query;
+        } else {
+            return $query->where('branch_id', auth()->user()->branch_id);
+        }
     }
 }

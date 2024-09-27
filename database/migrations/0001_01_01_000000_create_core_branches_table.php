@@ -11,15 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('produks', function (Blueprint $table) {
+        // ! Pastikan migra
+        Schema::create('core_branches', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('branch_id')->nullable();
-            $table->string('NamaProduk')->nullable();
-            $table->decimal('Harga',10,2)->nullable();
-            $table->integer('Stok')->nullable()->default(0);
-
+            $table->string('branch_name')->nullable();
+            $table->string('branch_address')->nullable();
+            $table->softDeletes();
             $table->timestamps();
-            $table->softDeletesTz();
         });
     }
 
@@ -28,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('produk');
+        Schema::dropIfExists('core_branches');
     }
 };
