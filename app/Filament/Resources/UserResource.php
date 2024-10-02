@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\Hash;
 use App\Filament\Resources\UserResource\Pages;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Route;
+
 
 class UserResource extends Resource
 {
@@ -38,6 +40,11 @@ class UserResource extends Resource
                     ->email()
                     ->required()
                     ->label('Email'),
+                TextInput::make('branch_id') 
+                ->label('Branch ID') 
+                ->required() 
+                ->numeric() 
+                ->minValue(1), 
 
                 // Pengaturan password berdasarkan kondisi "create" atau "edit"
                 Forms\Components\Section::make('Pengaturan Password')

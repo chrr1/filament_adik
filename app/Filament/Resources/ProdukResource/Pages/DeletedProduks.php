@@ -11,7 +11,7 @@ use App\Filament\Resources\ProdukResource;
 
 class DeletedProduks extends ListRecords
 {
-    protected static ?string $title = 'Produk Derhapus';
+    protected static ?string $title = 'Produk Terhapus';
     protected static ?string $breadcrumb = "Deleted";
     protected static string $resource = ProdukResource::class;
 

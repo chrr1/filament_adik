@@ -2,6 +2,11 @@
 
 return [
 
+    'aliases' => [
+    
+    'PDF' => Elibyy\TCPDF\Facades\TCPDF::class,
+],
+
     /*
     |--------------------------------------------------------------------------
     | Application Name
